@@ -16,11 +16,18 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
+      packages: write # 這一行非常重要，允許寫入 GHCR
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      # [新增步驟] 自動將擁有者名稱轉為小寫並存入環境變數
+      - name: Lowercase repository owner
+        run: |
+          echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
+        env:
+          OWNER: '${{ github.repository_owner }}'
 
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
@@ -38,8 +45,9 @@ jobs:
           context: .
           push: true
           platforms: linux/amd64,linux/arm64
+          # 使用自動轉換的小寫變數 env.OWNER_LC
           tags: |
-            ghcr.io/wilsonaimaster/wilsonip:8888
+            ghcr.io/${{ env.OWNER_LC }}/wilsonip:8888
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.description=HTTP Server
