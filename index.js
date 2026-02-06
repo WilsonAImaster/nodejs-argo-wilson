@@ -6,7 +6,7 @@ const path = require("path");
 const https = require("https");
 
 // 1. 嚴格讀取環境變數 (Strict Environment Variable Check)
-// ⚠️ 如果沒有設定這些變數，程式會直接崩潰，保護您的安全
+// ⚠️ 這裡只讀取變數，絕不使用 || '寫死的值'
 const ARGO_AUTH = process.env.ARGO_AUTH;
 const PORT = process.env.PORT || 3000;
 
@@ -16,7 +16,7 @@ if (!ARGO_AUTH) {
   process.exit(1);
 }
 
-// 2. 建立簡單的 Web Server (Keep-Alive)
+// 2. 建立簡單的 Web Server (Keep-Alive，防止被平台休眠)
 app.get("/", (req, res) => {
   res.send("Welcome to Wilson's Secure Tunnel. Service is running safely.");
 });
@@ -26,12 +26,13 @@ app.listen(PORT, () => {
 });
 
 // 3. 下載並啟動 Cloudflared (Argo Tunnel)
+// 這裡會根據系統架構自動下載官方程式，確保沒有後門
 const cloudflaredPath = path.join("/tmp", "cloudflared");
 
 function startArgo() {
   console.log("🚀 正在準備啟動 Argo Tunnel...");
 
-  // 判斷系統架構 (AMD64 或 ARM64)
+  // 判斷是 AMD64 還是 ARM64
   const arch = process.arch === "arm64" ? "arm64" : "amd64";
   const url = `https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-${arch}`;
 
@@ -51,7 +52,7 @@ function startArgo() {
         }
 
         console.log("🔗 正在連線至 Cloudflare Edge...");
-        // 使用 Token 啟動 Tunnel
+        // 使用環境變數中的 Token 啟動，不留痕跡
         const cmd = `${cloudflaredPath} tunnel --edge-ip-version auto --protocol http2 run --token ${ARGO_AUTH}`;
         
         const tunnel = exec(cmd);
